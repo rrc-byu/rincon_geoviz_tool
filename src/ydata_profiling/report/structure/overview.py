@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import Any, List
 from urllib.parse import quote
 
+from slugify import slugify
+
 from ydata_profiling.config import Settings
 from ydata_profiling.model import BaseDescription
 from ydata_profiling.model.alerts import AlertType
@@ -20,7 +22,10 @@ from ydata_profiling.report.presentation.core import Alerts, Container
 from ydata_profiling.report.presentation.core import Image as ImageWidget
 from ydata_profiling.report.presentation.core import Table
 from ydata_profiling.report.presentation.core.renderable import Renderable
-from ydata_profiling.visualisation.plot import plot_overview_timeseries
+from ydata_profiling.visualisation.plot import (
+    plot_overview_spatio,
+    plot_overview_timeseries,
+)
 
 
 def get_dataset_overview(config: Settings, summary: BaseDescription) -> Renderable:
@@ -337,6 +342,46 @@ def get_timeseries_items(config: Settings, summary: BaseDescription) -> Containe
     )
 
 
+def get_spatio_items(config: Settings, summary: BaseDescription) -> Container:
+
+    table_stats = [
+        {
+            "name": "X Coordinate column",
+            "value": config.vars.spatio.xcolumn,
+        },
+        {
+            "name": "Y Coordinate column",
+            "value": config.vars.spatio.ycolumn,
+        },
+    ]
+
+    spatio_info = Table(table_stats, name="Spatio statistics", style=config.html.style)
+
+    # scatter_pairwise(config, series1=summary.variables[config.vars.spatio.xcolumn], series2=summary.variables[config.vars.spatio.ycolumn], x_label="x", y_label="y"),
+    # spatio_image = ImageWidget(
+    ##        plot_overview_timeseries(config, summary.variables),
+    #        image_format=config.plot.image_format,
+    #        alt="ts_plot_scaled",
+    #        name="Scaled",
+    #        anchor_id="ts_plot_scaled_overview",
+    # )
+    # summary.scatter
+    spatio_image = ImageWidget(
+        plot_overview_spatio(config, spatio_items=summary.spatio_index_analysis),
+        image_format=config.plot.image_format,
+        alt=f"{config.vars.spatio.xcolumn} x {config.vars.spatio.ycolumn}",
+        anchor_id=f"interactions_{slugify(config.vars.spatio.xcolumn)}_{slugify(config.vars.spatio.ycolumn)}",
+        name=config.vars.spatio.ycolumn,
+    )
+
+    return Container(
+        [spatio_info, spatio_image],
+        anchor_id="spatio_overview",
+        name="Spatio",
+        sequence_type="grid",
+    )
+
+
 def get_dataset_items(config: Settings, summary: BaseDescription, alerts: list) -> list:
     """Returns the dataset overview (at the top of the report)
 
@@ -366,6 +411,9 @@ def get_dataset_items(config: Settings, summary: BaseDescription, alerts: list) 
 
     if summary.time_index_analysis:
         items.append(get_timeseries_items(config, summary))
+
+    if summary.spatio_index_analysis:
+        items.append(get_spatio_items(config, summary))
 
     if alerts:
         items.append(get_dataset_alerts(config, alerts))

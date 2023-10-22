@@ -2,7 +2,7 @@ import copy
 import json
 import warnings
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, Tuple, Union
 
 try:
     from pyspark.sql import DataFrame as sDataFrame
@@ -62,6 +62,7 @@ class ProfileReport(SerializeReport, ExpectationsReport):
         minimal: bool = False,
         tsmode: bool = False,
         sortby: Optional[str] = None,
+        spatiomode: Optional[Tuple[str, str]] = None,
         sensitive: bool = False,
         explorative: bool = False,
         dark_mode: bool = False,
@@ -97,7 +98,7 @@ class ProfileReport(SerializeReport, ExpectationsReport):
             type_schema: optional dict containing pairs of `column name`: `type`
             **kwargs: other arguments, for valid arguments, check the default configuration file.
         """
-        self.__validate_inputs(df, minimal, tsmode, config_file, lazy)
+        self.__validate_inputs(df, minimal, tsmode, spatiomode, config_file, lazy)
 
         if config_file or minimal:
             if not config_file:
@@ -141,6 +142,11 @@ class ProfileReport(SerializeReport, ExpectationsReport):
         if tsmode and sortby:
             report_config.vars.timeseries.sortby = sortby
 
+        if spatiomode is not None:
+            report_config.vars.spatio.active = True
+            report_config.vars.spatio.xcolumn = spatiomode[0]
+            report_config.vars.spatio.ycolumn = spatiomode[1]
+
         self.df = self.__initialize_dataframe(df, report_config)
         self.config = report_config
         self._df_hash = None
@@ -158,6 +164,7 @@ class ProfileReport(SerializeReport, ExpectationsReport):
         df: Optional[Union[pd.DataFrame, sDataFrame]],
         minimal: bool,
         tsmode: bool,
+        spatiomode: Optional[Tuple[str, str]],
         config_file: Optional[Union[Path, str]],
         lazy: bool,
     ) -> None:
@@ -176,10 +183,22 @@ class ProfileReport(SerializeReport, ExpectationsReport):
                 raise ValueError(
                     "DataFrame is empty. Please" "provide a non-empty DataFrame."
                 )
+
+            if spatiomode is not None:
+                if not all(col_name in df.columns for col_name in spatiomode):
+                    raise ValueError(
+                        "The values in spatiomode should be columns in the dataframe."
+                    )
+
         else:
             if tsmode:
                 raise NotImplementedError(
                     "Time-Series dataset analysis is not yet supported for Spark DataFrames"
+                )
+
+            if spatiomode is not None:
+                raise NotImplementedError(
+                    "Spatio analysis is not yet supported for Spark DataFrames"
                 )
 
             if (

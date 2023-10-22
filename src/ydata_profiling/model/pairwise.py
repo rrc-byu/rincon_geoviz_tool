@@ -31,3 +31,11 @@ def get_scatter_plot(
         return scatter_pairwise(config, df_temp[x], df_temp[y], x, y)
     else:
         return ""
+
+
+def get_spatio_plot(config: Settings, df: pd.DataFrame, x: Any, y: Any) -> str:
+    if config.vars.spatio.active:
+        df_temp = df[[x, y]].dropna()
+        return scatter_pairwise(config, df_temp[x], df_temp[y], x, y)
+    else:
+        return ""

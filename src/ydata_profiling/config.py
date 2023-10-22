@@ -114,6 +114,12 @@ class TimeseriesVars(BaseModel):
     pacf_acf_lag: int = 100
 
 
+class SpatioVars(BaseModel):
+    active: bool = False
+    xcolumn: Optional[str] = None
+    ycolumn: Optional[str] = None
+
+
 class Univariate(BaseModel):
     num: NumVars = NumVars()
     text: TextVars = TextVars()
@@ -124,6 +130,7 @@ class Univariate(BaseModel):
     file: FileVars = FileVars()
     url: UrlVars = UrlVars()
     timeseries: TimeseriesVars = TimeseriesVars()
+    spatio: SpatioVars = SpatioVars()
 
 
 class MissingPlot(BaseModel):

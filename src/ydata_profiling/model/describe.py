@@ -14,11 +14,16 @@ from ydata_profiling.model.correlations import (
     get_active_correlations,
 )
 from ydata_profiling.model.dataframe import check_dataframe, preprocess
-from ydata_profiling.model.description import TimeIndexAnalysis
+from ydata_profiling.model.description import SpatioIndexAnalysis, TimeIndexAnalysis
 from ydata_profiling.model.duplicates import get_duplicates
 from ydata_profiling.model.missing import get_missing_active, get_missing_diagram
-from ydata_profiling.model.pairwise import get_scatter_plot, get_scatter_tasks
+from ydata_profiling.model.pairwise import (
+    get_scatter_plot,
+    get_scatter_tasks,
+    get_spatio_plot,
+)
 from ydata_profiling.model.sample import get_custom_sample, get_sample
+from ydata_profiling.model.spatio_index import get_spatio_index_description
 from ydata_profiling.model.summarizer import BaseSummarizer
 from ydata_profiling.model.summary import get_series_descriptions
 from ydata_profiling.model.table import get_table_stats
@@ -131,6 +136,12 @@ def describe(
                 get_scatter_plot, pbar, f"scatter {x}, {y}"
             )(config, df, x, y, interval_columns)
 
+        # Map matrix
+        pbar.set_postfix_str("Generating map data")
+        spatio_map = get_spatio_plot(
+            config, df, x=config.vars.spatio.xcolumn, y=config.vars.spatio.xcolumn
+        )
+
         # missing diagrams
         missing_map = get_missing_active(config, table_stats)
         pbar.total += len(missing_map)
@@ -163,6 +174,12 @@ def describe(
         if config.vars.timeseries.active:
             tsindex_description = get_time_index_description(config, df, table_stats)
 
+        if config.vars.spatio.active:
+            spatioindex_description = {
+                "x_col_name": config.vars.spatio.xcolumn,
+                "y_col_name": config.vars.spatio.ycolumn,
+            }
+
         pbar.set_postfix_str("Get reproduction details")
         package = {
             "ydata_profiling_version": __version__,
@@ -179,9 +196,14 @@ def describe(
     if config.vars.timeseries.active and tsindex_description:
         time_index_analysis = TimeIndexAnalysis(**tsindex_description)
 
+    spatio_index_analysis = None
+    if config.vars.spatio.active and spatioindex_description:
+        spatio_index_analysis = SpatioIndexAnalysis(df, **spatioindex_description)
+
     description = BaseDescription(
         analysis=analysis,
         time_index_analysis=time_index_analysis,
+        spatio_index_analysis=spatio_index_analysis,
         table=table_stats,
         variables=series_description,
         scatter=scatter_matrix,

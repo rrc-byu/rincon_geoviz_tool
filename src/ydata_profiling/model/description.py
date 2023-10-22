@@ -76,6 +76,23 @@ class TimeIndexAnalysis:
 
 
 @dataclass
+class SpatioIndexAnalysis:
+    """Description of spatio index analysis module of report.
+
+    Attributes:
+        x_col (Any): X-column of the dataframe
+        y_col (Any): Y-column of the dataframe
+    """
+
+    x_col: Any
+    y_col: Any
+
+    def __init__(self, df: Any, x_col_name: Any, y_col_name: Any) -> None:
+        self.x_col = df.loc[:, x_col_name]
+        self.y_col = df.loc[:, y_col_name]
+
+
+@dataclass
 class BaseDescription:
     """Description of DataFrame.
 
@@ -95,6 +112,7 @@ class BaseDescription:
 
     analysis: BaseAnalysis
     time_index_analysis: Optional[TimeIndexAnalysis]
+    spatio_index_analysis: Optional[SpatioIndexAnalysis]
     table: Any
     variables: Dict[str, Any]
     scatter: Any

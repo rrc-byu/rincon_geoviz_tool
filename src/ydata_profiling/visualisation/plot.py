@@ -1,17 +1,29 @@
 """Plot functions for the profiling report."""
 import copy
+import warnings
 from typing import Any, Callable, List, Optional, Tuple, Union
 
+warnings.simplefilter(action="ignore", category=FutureWarning)
+
+import geopandas as gpd
 import matplotlib
 import numpy as np
 import pandas as pd
 import seaborn as sns
+from matplotlib import dates
 from matplotlib import pyplot as plt
 from matplotlib.collections import PolyCollection
 from matplotlib.colors import Colormap, LinearSegmentedColormap, ListedColormap, rgb2hex
-from matplotlib.dates import AutoDateLocator, ConciseDateFormatter
+from matplotlib.dates import (
+    AutoDateFormatter,
+    AutoDateLocator,
+    ConciseDateFormatter,
+    date2num,
+    datestr2num,
+)
 from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter, MaxNLocator
+from matplotlib.transforms import Bbox
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 from typeguard import typechecked
 from wordcloud import WordCloud
@@ -711,6 +723,62 @@ def _get_ts_lag(config: Settings, series: pd.Series) -> int:
     lag = config.vars.timeseries.pacf_acf_lag
     max_lag_size = (len(series) // 2) - 1
     return np.min([lag, max_lag_size])
+
+
+# Spatio visualization code
+
+
+@manage_matplotlib_context()
+def plot_overview_spatio(
+    config: Settings,
+    spatio_items: Any,
+    figsize: tuple = (6, 4),
+    scale: bool = False,
+) -> matplotlib.figure.Figure:
+    """Plot an line plot from the data and return the AxesSubplot object.
+    Args:
+        variables: The data to plot.
+        figsize: The size of the figure (width, height) in inches, default (6,4).
+        scale: Scale series values between [0,1]. Defaults to False.
+    Returns:
+        The TimeSeries lineplot.
+    """
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_subplot(111)
+    df = pd.DataFrame()
+    df["x_col"] = spatio_items.x_col
+    df["y_col"] = spatio_items.y_col
+    df["index"] = df["x_col"].index
+    df["index"] = date2num(df["index"].index)
+    indices = (df["x_col"].notna()) & (df["y_col"].notna())
+
+    countries = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
+    countries.plot(color="lightgrey", ax=ax)
+
+    scatter = plt.scatter(
+        x=df["x_col"][indices],
+        y=df["y_col"][indices],
+        c=df["index"][indices],
+        cmap="YlOrRd",
+    )
+    plt.xlabel(str(config.vars.spatio.xcolumn))
+    plt.ylabel(str(config.vars.spatio.ycolumn))
+    plt.title(
+        "Scatter Plot of "
+        + str(config.vars.spatio.xcolumn)
+        + " vs. "
+        + str(config.vars.spatio.ycolumn)
+    )
+
+    loc = AutoDateLocator()
+    fig.colorbar(
+        scatter, ticks=loc, format=AutoDateFormatter(loc), label="Time", shrink=0.5
+    )
+
+    # plt.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+
+    plt.subplots_adjust(right=0.9)
+    return plot_360_n0sc0pe(config)
 
 
 def _plot_acf_pacf(
